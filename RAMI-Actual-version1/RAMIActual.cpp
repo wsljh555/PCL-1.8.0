@@ -438,7 +438,6 @@ LRESULT CALLBACK WndProc(   HWND    hWnd,                   // Handle For This W
 }
 
 
-
 //Windows应用程序的入口。
 //在这里我们调用窗口创建程序，处理窗口消息，监听用户交互。
 int WINAPI WinMain( HINSTANCE   hInstance,              // Instance
@@ -1094,26 +1093,34 @@ void DrawCylinder(double baseRadius, double topRadius, int _slices, int _stacks,
 	glPopMatrix();
 }
 
+#pragma region ReadRAMI
+/*
+功能：读取简单RAMI数据
+数据：读取HET04_cyl.def，包括叶片大小，相对于原点的叶子位置（相对路径）和方向余弦信息。对应读取abObjFName所在路径
+说明：
+  读取过程主要涉及：
+  1.二维指针的初始化
+  2.数组内容的读取
+*/
 int ReadRAMI( char* filepath) 
 {
-	FILE* fp;//文件指针
+	FILE* fp;											//文件指针
 
-
-	if((fp = fopen(filepath,"r"))!=NULL)//判断文件存在否
+	if((fp = fopen(filepath,"r"))!=NULL)				//判断文件存在否
 	{
 		char * tmp = new char[100];
 		lines = 0;
-		while (!feof(fp) && fgets(tmp,100,fp))
+		while (!feof(fp) && fgets(tmp,100,fp))			//统计文件总行数
 		{
 			lines ++;
 		}
-		fileRAMI = new float*[lines];
+
+		fileRAMI = new float*[lines];					//二维数组的初始化
 		for (int i = 0; i < lines; i++)
 		{
 			fileRAMI[i] = new float[7];
 		}
 		rewind(fp);
-
 
 		for (int i = 0; i<lines; i++)
 		{
@@ -1129,7 +1136,17 @@ int ReadRAMI( char* filepath)
 		return 0;
 	}
 }
+#pragma endregion ReadRAMI
 
+#pragma region ReadLocation
+/*
+功能：读取简单RAMI数据位置信息
+数据：读取cyl_coord.txt，包括球体和圆柱体的中心坐标位置（绝对位置）。对应读取abLocationFName所在路径
+说明：
+  读取过程主要涉及：
+  1.二维指针的初始化
+  2.数组内容的读取
+*/
 int ReadLocation( char* filepath) 
 {
 	FILE* fp;//文件指针
@@ -1150,7 +1167,6 @@ int ReadLocation( char* filepath)
 		}
 		rewind(fp);
 
-
 		for (int i = 0; i<lines2; i++)
 		{
 			fscanf_s(fp,"%f %f %f\n", &fileLocation[i][0], &fileLocation[i][1], &fileLocation[i][2]);
@@ -1165,7 +1181,16 @@ int ReadLocation( char* filepath)
 		return 0;
 	}
 }
+#pragma endregion ReadLocation
 
+#pragma region FreeMemory
+/*
+功能：释放简单RAMI内存
+说明：
+  二维指针空间删除时**fileRAMI：
+  1.先删除最后开辟的空间：即fileRAMI[i]指向的空间，因为是数组所以加上[]
+  2.再删除之前开辟的空间：即fileRAMI指向的空间，即fileRAMI[i]指针的保存空间，以为是数组，所以加上[]
+*/
 void FreeMemory() 
 {
 	for (int i = 0; i < lines; i++)
@@ -1174,6 +1199,287 @@ void FreeMemory()
 	}
 	delete [] fileRAMI;	
 }
+#pragma endregion FreeMemory
+
+#pragma region BuildlistsDisk
+/*
+功能：创建简单RAMI的DisplayList
+说明：
+  1.使用显示列表一般有4个步骤：
+	1）创建列表编号(ID)：glGenLists() 
+	2) 创建列表：glNewList(),glEndList()用于创建和替换一个显示列表函数原型
+	3）调用列表：glCallList(). glListBase可以用来设置偏移量
+	4) 销毁列表：glDeleteLists().
+  2.OpenGL的顶点必须在glBegin和glEnd之间使用
+  3.三维角度看，面有正反，约定顶点以逆时针出现在屏幕的上方为正面
+  4.对矩阵的操作都是对栈顶矩阵进行的,压进去的矩阵是哪个矩阵，当前矩阵就是那个矩阵.弹出来的是哪个矩阵，当前矩阵就是那个矩阵.
+*/
+
+void BuildlistsDisk(char* _filePath)
+{
+	if (!ReadRAMI(_filePath))
+	{
+		return;
+	}
+
+	int index = glGenLists(1);													//创建显示列表，返回第一个显示列表的名字
+
+	//检查错误代码
+	int error =glGetError();							
+	if (error != GL_NO_ERROR)
+	{
+		cout<<"An opengl error has occured: "<<gluErrorString(error)<<endl;
+	}
+
+	glNewList(index,GL_COMPILE);//第2个参数，告诉OpenGL我们想预先在内存中构造这个列表，这样每次画的时候就不必重新计算怎么构造物体了。
+	glPushMatrix();																//存当前矩阵到矩阵栈中
+	GLUquadricObj *objDisk = gluNewQuadric();									//创建二次曲面对像
+	gluQuadricDrawStyle(objDisk,GLU_FILL);										//设置二次曲面绘制风格，GLU_FILL表示用多边形来进行模拟
+	glColor3ub(0, 255, 0);														//对应glColor3f(GLfloat red, GLfloat green,GLfloat blue)
+	for (int i = 0; i < lines; i++)
+	{
+		glLoadIdentity();														//重置当前指定的矩阵为单位矩阵,实际将当前点移动到屏幕中心
+		glTranslated(fileRAMI[i][1],fileRAMI[i][2],(fileRAMI[i][3]-0.5));		//平移函数
+		glRotated(180,fileRAMI[i][4],fileRAMI[i][5],fileRAMI[i][6]+1);
+		gluDisk(objDisk,0.0,fileRAMI[i][0],30,1);
+	}
+	gluDeleteQuadric(objDisk);
+	glPopMatrix();																//从矩阵栈弹出矩阵
+
+	float sHeight = 1;
+
+	glBegin(GL_QUADS);  //25×25地块										    //多组独立填充四边形								
+	glColor3ub(127, 63, 127);
+	glVertex3f( 12.5,  12.5, -0.5*sHeight-fileRAMI[0][0]);
+	glVertex3f(-12.5,  12.5, -0.5*sHeight-fileRAMI[0][0]);
+	glVertex3f(-12.5, -12.5, -0.5*sHeight-fileRAMI[0][0]);
+	glVertex3f( 12.5, -12.5, -0.5*sHeight-fileRAMI[0][0]);
+	glEnd();
+
+	glEndList();
+
+
+	FreeMemory();
+}
+#pragma endregion BuildlistsDisk
+
+
+//建立Display List
+int BuildLists(char* _fileDir, int _objNum, int _groupNum, int flag)
+{
+	
+	int _listNum = _objNum + _groupNum*3+1;
+	int lIndex;
+
+	char tmpFName[_MAX_FNAME];
+	char tmpFPath[_MAX_PATH];
+	
+	if (!flag)
+	{
+		int leaf = glGenLists(_listNum);
+		strcpy_s(tmpFName,_MAX_FNAME,"PONI_leaf.def");
+		_makepath_s(tmpFPath,_MAX_PATH, NULL,_fileDir,tmpFName,NULL);
+		Execute(leaf, tmpFPath,drawLeaf);
+
+		lIndex = leaf + 1;
+		for (int i = 1; i <= _groupNum; i++)
+		{
+			sprintf_s(tmpFName, "PONI%d_foliage", i);
+			_makepath_s(tmpFPath, _MAX_PATH, NULL, _fileDir, tmpFName,"dat");
+			Execute(lIndex, tmpFPath,drawFoliage,leaf);
+
+			sprintf_s(tmpFName, "PONI%d_wood", i);
+			_makepath_s(tmpFPath, _MAX_PATH, NULL, _fileDir, tmpFName,"dat");
+			Execute(lIndex+_groupNum, tmpFPath,drawWood);
+			lIndex++;
+		}
+	} 
+	else
+	{
+		lIndex = glGenLists(_groupNum+1);
+	}
+
+	lIndex = _objNum + 1;
+	for (int i = 1; i <= _groupNum; i++)
+	{
+		
+		sprintf_s(tmpFName, "PONI%d_treetransform", i);
+		_makepath_s(tmpFPath, _MAX_PATH, NULL, _fileDir, tmpFName,"dat");
+		Execute(lIndex+ _groupNum*2, tmpFPath,drawTree, lIndex );
+		lIndex++;
+	}
+
+
+	glNewList(_listNum, GL_COMPILE);
+	for (int i=1 ; i <= _groupNum; i++)
+	{
+		glCallList(_objNum+_groupNum*2+i);
+	}
+	glEndList();
+	return _listNum;
+}
+
+//建立Display List
+int BuildListsHET08(char* _fileDir, int _objNum, int _groupNum, int flag)
+{
+	int _listNum = _objNum + _groupNum*3+1;;
+	int shoot;
+	int lIndex;
+	char tmpFName[_MAX_FNAME];
+	char tmpFPath[_MAX_PATH];
+
+	if(!flag)
+	{
+		shoot = glGenLists(_listNum);
+		lIndex = shoot + 1;
+
+		strcpy_s(tmpFName,_MAX_FNAME,"PIMO_shoot.def");
+		_makepath_s(tmpFPath,_MAX_PATH, NULL,_fileDir,tmpFName,NULL);
+
+		Execute(shoot, tmpFPath,drawShoot_PIMO);
+
+		for (int i = 1; i <= _groupNum; i++)
+		{
+			sprintf_s(tmpFName, "PIMO%d_foliage", i);
+			_makepath_s(tmpFPath, _MAX_PATH, NULL, _fileDir, tmpFName,"dat");
+			Execute(lIndex , tmpFPath,drawFoliage,shoot);
+
+			sprintf_s(tmpFName, "PIMO%d_stem", i);
+			_makepath_s(tmpFPath, _MAX_PATH, NULL, _fileDir, tmpFName,"dat");
+			ExecuteTri(lIndex + _groupNum, tmpFPath);
+			lIndex++;
+
+
+		}
+
+	}
+	else
+	{
+		//_listNum = _groupNum*2+1;
+		shoot = 1;
+		lIndex = glGenLists(_groupNum+1);
+	}
+		
+
+	lIndex = _objNum + 1;
+	for (int i = 1; i <= _groupNum; i++)
+	{
+	//	sprintf_s(tmpFName, "PONI%d_wood", i);
+	//	_makepath_s(tmpFPath, _MAX_PATH, NULL, _fileDir, tmpFName,"dat");
+	//	Execute(lIndex+6, tmpFPath,drawWood);
+		sprintf_s(tmpFName, "PIMO%d_treetransform", i);
+		_makepath_s(tmpFPath, _MAX_PATH, NULL, _fileDir, tmpFName,"dat");
+		Execute(lIndex + _groupNum*2, tmpFPath,drawTree, lIndex );
+		lIndex++;
+	}
+
+
+	glNewList(_listNum, GL_COMPILE);
+	for (int i=1 ; i <= _groupNum; i++)
+	{
+		glCallList(_objNum+_groupNum+_groupNum+i);
+	}
+	glEndList();
+	return _listNum;
+}
+
+
+
+int BuildlistsDiskScene(char *objPath, char* locationPath, int flag)
+{
+	int objIndex, lIndex;
+	if (!flag)
+	{
+		if (!ReadRAMI(objPath))
+		{
+			return -1;
+		}
+
+		float tmpAngle = 0.0f; 
+		int slices = 10;
+		float angleInterval = M_PI / slices;
+		float radius = fileRAMI[0][0];
+
+		objIndex = glGenLists(2);
+
+
+		glNewList(objIndex,GL_COMPILE);
+
+		//glPushMatrix();
+		GLUquadricObj *objDisk = gluNewQuadric();
+		gluQuadricDrawStyle(objDisk,GLU_FILL);
+		glColor3ub(0, 255, 0);
+		//glColor3ub(78, 255, 110);
+		for (int i = 0; i < lines; i++)
+		{
+			glPushMatrix();
+			glTranslatef(fileRAMI[i][1],fileRAMI[i][2],fileRAMI[i][3]);
+			glRotatef(180,fileRAMI[i][4],fileRAMI[i][5],fileRAMI[i][6]+1);
+			gluDisk(objDisk,0.0,fileRAMI[i][0],10,1);
+
+			glPopMatrix();
+		}
+		gluDeleteQuadric(objDisk);
+		//glPopMatrix();
+		glEndList();
+		FreeMemory();
+		lIndex = objIndex+1;
+	} 
+	else
+	{
+		objIndex = 1;
+		lIndex = glGenLists(1);
+	}
+	
+	
+
+	errno_t err;
+	FILE* fp;
+	float *location = new float[3];
+	if (err = fopen_s(&fp, locationPath, "r"))
+	{
+		return err;
+	}
+	glNewList(lIndex, GL_COMPILE);
+	int i = 0;
+	while(!feof(fp) /*&&i < 100*/)
+	{
+		fscanf_s(fp,"%f %f %f\n", &location[0], &location[1], &location[2]);
+
+		glMatrixMode(GL_MODELVIEW);                     // Select The Modelview Matrix
+		glLoadIdentity();                           // Reset The Modelview Matrix
+		//if ( 1/*abs(location[1]) < 10*/ )
+		if ( location[0] >= (xOffset - sideLength/2 - maxTreeRadius)/cosz && location[0] <= (xOffset + sideLength/2 + maxTreeRadius)/cosz \
+			&& location[1] >= (yOffset - sideLength2/2 )/cosx- maxTreeRadius - maxTreeHeight * tanx/cosz - 5 \
+			&& location[1] <= ((yOffset + sideLength2/2)/cosx + maxTreeRadius)/cosz + 5 )
+		{
+			glPushMatrix(); 
+			glTranslatef(location[0], location[1], location[2]);
+			glCallList(objIndex);
+			glPopMatrix();
+		}
+		
+		i++;
+	}
+
+	//float sHeight = 3;
+	//glBegin(GL_QUADS);  //25×25地块
+	//glColor3ub(150, 100, 78);
+	//glVertex3f( 135.0,  135.0, 0.0-sHeight);
+	//glVertex3f(-135.0,  135.0, 0.0-sHeight);
+	//glVertex3f(-135.0, -135.0, 0.0-sHeight);
+	//glVertex3f( 135.0, -135.0, 0.0-sHeight);
+	//glEnd();
+
+	glEndList();
+	fclose(fp);
+	fp = 0;
+	delete [] location;
+	return lIndex;
+
+}
+
+
 
 
 //执行代码
@@ -1532,254 +1838,6 @@ int drawWood( char *commander,int listIndex)
 	}
 
 	//
-}
-
-//建立Display List
-int BuildLists(char* _fileDir, int _objNum, int _groupNum, int flag)
-{
-	
-	int _listNum = _objNum + _groupNum*3+1;
-	int lIndex;
-
-	char tmpFName[_MAX_FNAME];
-	char tmpFPath[_MAX_PATH];
-	
-	if (!flag)
-	{
-		int leaf = glGenLists(_listNum);
-		strcpy_s(tmpFName,_MAX_FNAME,"PONI_leaf.def");
-		_makepath_s(tmpFPath,_MAX_PATH, NULL,_fileDir,tmpFName,NULL);
-		Execute(leaf, tmpFPath,drawLeaf);
-
-		lIndex = leaf + 1;
-		for (int i = 1; i <= _groupNum; i++)
-		{
-			sprintf_s(tmpFName, "PONI%d_foliage", i);
-			_makepath_s(tmpFPath, _MAX_PATH, NULL, _fileDir, tmpFName,"dat");
-			Execute(lIndex, tmpFPath,drawFoliage,leaf);
-
-			sprintf_s(tmpFName, "PONI%d_wood", i);
-			_makepath_s(tmpFPath, _MAX_PATH, NULL, _fileDir, tmpFName,"dat");
-			Execute(lIndex+_groupNum, tmpFPath,drawWood);
-			lIndex++;
-		}
-	} 
-	else
-	{
-		lIndex = glGenLists(_groupNum+1);
-	}
-
-	lIndex = _objNum + 1;
-	for (int i = 1; i <= _groupNum; i++)
-	{
-		
-		sprintf_s(tmpFName, "PONI%d_treetransform", i);
-		_makepath_s(tmpFPath, _MAX_PATH, NULL, _fileDir, tmpFName,"dat");
-		Execute(lIndex+ _groupNum*2, tmpFPath,drawTree, lIndex );
-		lIndex++;
-	}
-
-
-	glNewList(_listNum, GL_COMPILE);
-	for (int i=1 ; i <= _groupNum; i++)
-	{
-		glCallList(_objNum+_groupNum*2+i);
-	}
-	glEndList();
-	return _listNum;
-}
-
-//建立Display List
-int BuildListsHET08(char* _fileDir, int _objNum, int _groupNum, int flag)
-{
-	int _listNum = _objNum + _groupNum*3+1;;
-	int shoot;
-	int lIndex;
-	char tmpFName[_MAX_FNAME];
-	char tmpFPath[_MAX_PATH];
-
-	if(!flag)
-	{
-		shoot = glGenLists(_listNum);
-		lIndex = shoot + 1;
-
-		strcpy_s(tmpFName,_MAX_FNAME,"PIMO_shoot.def");
-		_makepath_s(tmpFPath,_MAX_PATH, NULL,_fileDir,tmpFName,NULL);
-
-		Execute(shoot, tmpFPath,drawShoot_PIMO);
-
-		for (int i = 1; i <= _groupNum; i++)
-		{
-			sprintf_s(tmpFName, "PIMO%d_foliage", i);
-			_makepath_s(tmpFPath, _MAX_PATH, NULL, _fileDir, tmpFName,"dat");
-			Execute(lIndex , tmpFPath,drawFoliage,shoot);
-
-			sprintf_s(tmpFName, "PIMO%d_stem", i);
-			_makepath_s(tmpFPath, _MAX_PATH, NULL, _fileDir, tmpFName,"dat");
-			ExecuteTri(lIndex + _groupNum, tmpFPath);
-			lIndex++;
-
-
-		}
-
-	}
-	else
-	{
-		//_listNum = _groupNum*2+1;
-		shoot = 1;
-		lIndex = glGenLists(_groupNum+1);
-	}
-		
-
-	lIndex = _objNum + 1;
-	for (int i = 1; i <= _groupNum; i++)
-	{
-	//	sprintf_s(tmpFName, "PONI%d_wood", i);
-	//	_makepath_s(tmpFPath, _MAX_PATH, NULL, _fileDir, tmpFName,"dat");
-	//	Execute(lIndex+6, tmpFPath,drawWood);
-		sprintf_s(tmpFName, "PIMO%d_treetransform", i);
-		_makepath_s(tmpFPath, _MAX_PATH, NULL, _fileDir, tmpFName,"dat");
-		Execute(lIndex + _groupNum*2, tmpFPath,drawTree, lIndex );
-		lIndex++;
-	}
-
-
-	glNewList(_listNum, GL_COMPILE);
-	for (int i=1 ; i <= _groupNum; i++)
-	{
-		glCallList(_objNum+_groupNum+_groupNum+i);
-	}
-	glEndList();
-	return _listNum;
-}
-
-void BuildlistsDisk(char* _filePath)
-{
-	if (!ReadRAMI(_filePath))
-	{
-		return;
-	}
-
-	int index = glGenLists(1);
-	glNewList(index,GL_COMPILE);
-	glPushMatrix();
-	GLUquadricObj *objDisk = gluNewQuadric();
-	gluQuadricDrawStyle(objDisk,GLU_FILL);
-	glColor3ub(0, 255, 0);
-	for (int i = 0; i < lines; i++)
-	{
-		glLoadIdentity();  
-		glTranslated(fileRAMI[i][1],fileRAMI[i][2],(fileRAMI[i][3]-0.5));
-		glRotated(180,fileRAMI[i][4],fileRAMI[i][5],fileRAMI[i][6]+1);
-		gluDisk(objDisk,0.0,fileRAMI[i][0],30,1);
-	}
-	gluDeleteQuadric(objDisk);
-	glPopMatrix();
-
-	float sHeight = 1;
-	glBegin(GL_QUADS);  //25×25地块
-	glColor3ub(127, 63, 127);
-	glVertex3f( 12.5,  12.5, -0.5*sHeight-fileRAMI[0][0]);
-	glVertex3f(-12.5,  12.5, -0.5*sHeight-fileRAMI[0][0]);
-	glVertex3f(-12.5, -12.5, -0.5*sHeight-fileRAMI[0][0]);
-	glVertex3f( 12.5, -12.5, -0.5*sHeight-fileRAMI[0][0]);
-	glEnd();
-	glEndList();
-	FreeMemory();
-}
-
-int BuildlistsDiskScene(char *objPath, char* locationPath, int flag)
-{
-	int objIndex, lIndex;
-	if (!flag)
-	{
-		if (!ReadRAMI(objPath))
-		{
-			return -1;
-		}
-
-		float tmpAngle = 0.0f; 
-		int slices = 10;
-		float angleInterval = M_PI / slices;
-		float radius = fileRAMI[0][0];
-
-		objIndex = glGenLists(2);
-
-
-		glNewList(objIndex,GL_COMPILE);
-
-		//glPushMatrix();
-		GLUquadricObj *objDisk = gluNewQuadric();
-		gluQuadricDrawStyle(objDisk,GLU_FILL);
-		glColor3ub(0, 255, 0);
-		//glColor3ub(78, 255, 110);
-		for (int i = 0; i < lines; i++)
-		{
-			glPushMatrix();
-			glTranslatef(fileRAMI[i][1],fileRAMI[i][2],fileRAMI[i][3]);
-			glRotatef(180,fileRAMI[i][4],fileRAMI[i][5],fileRAMI[i][6]+1);
-			gluDisk(objDisk,0.0,fileRAMI[i][0],10,1);
-
-			glPopMatrix();
-		}
-		gluDeleteQuadric(objDisk);
-		//glPopMatrix();
-		glEndList();
-		FreeMemory();
-		lIndex = objIndex+1;
-	} 
-	else
-	{
-		objIndex = 1;
-		lIndex = glGenLists(1);
-	}
-	
-	
-
-	errno_t err;
-	FILE* fp;
-	float *location = new float[3];
-	if (err = fopen_s(&fp, locationPath, "r"))
-	{
-		return err;
-	}
-	glNewList(lIndex, GL_COMPILE);
-	int i = 0;
-	while(!feof(fp) /*&&i < 100*/)
-	{
-		fscanf_s(fp,"%f %f %f\n", &location[0], &location[1], &location[2]);
-
-		glMatrixMode(GL_MODELVIEW);                     // Select The Modelview Matrix
-		glLoadIdentity();                           // Reset The Modelview Matrix
-		//if ( 1/*abs(location[1]) < 10*/ )
-		if ( location[0] >= (xOffset - sideLength/2 - maxTreeRadius)/cosz && location[0] <= (xOffset + sideLength/2 + maxTreeRadius)/cosz \
-			&& location[1] >= (yOffset - sideLength2/2 )/cosx- maxTreeRadius - maxTreeHeight * tanx/cosz - 5 \
-			&& location[1] <= ((yOffset + sideLength2/2)/cosx + maxTreeRadius)/cosz + 5 )
-		{
-			glPushMatrix(); 
-			glTranslatef(location[0], location[1], location[2]);
-			glCallList(objIndex);
-			glPopMatrix();
-		}
-		
-		i++;
-	}
-
-	//float sHeight = 3;
-	//glBegin(GL_QUADS);  //25×25地块
-	//glColor3ub(150, 100, 78);
-	//glVertex3f( 135.0,  135.0, 0.0-sHeight);
-	//glVertex3f(-135.0,  135.0, 0.0-sHeight);
-	//glVertex3f(-135.0, -135.0, 0.0-sHeight);
-	//glVertex3f( 135.0, -135.0, 0.0-sHeight);
-	//glEnd();
-
-	glEndList();
-	fclose(fp);
-	fp = 0;
-	delete [] location;
-	return lIndex;
-
 }
 
 

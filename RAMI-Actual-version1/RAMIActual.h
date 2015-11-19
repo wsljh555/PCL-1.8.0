@@ -120,6 +120,7 @@ int BuildListsHET08(char* _fileDir, int _objNum, int _groupNum, int flag = 0);		
 int Execute(int index, char* _filePath, int(*func)(char*,int), int listIndex = 0);  //执行Actual Canopy文件
 int ExecuteTri(int index, char* _filePath);
 
+//具体绘图代码
 void DrawCylinder(double baseRadius, double topRadius, int slices, int stacks, float x0, float y0, float z0, float x1, float y1, float z1); //绘制圆柱体
 int drawLeaf(char *commander,int listIndex);										//层次1：画叶片
 int drawFoliage(char *commander,int listIndex);										//层次2：画一棵树

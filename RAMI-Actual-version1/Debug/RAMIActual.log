@@ -1,34 +1,9 @@
-﻿生成启动时间为 2015/9/28 21:04:09。
-     1>项目“D:\研究生\科研\G函数尺度效应\RAMI\RAMI-Actual\RAMIActual.vcxproj”在节点 2 上(Build 个目标)。
-     1>ClCompile:
-         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\CL.exe /c /I./Library /Zi /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _WINDOWS /Gm /EHsc /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc110.pdb" /Gd /TP /analyze- /errorReport:prompt RAMIActual.cpp
-         RAMIActual.cpp
-     1>RAMIActual.cpp(64): warning C4244: “=”: 从“double”转换到“GLfloat”，可能丢失数据
-     1>RAMIActual.cpp(65): warning C4244: “=”: 从“double”转换到“GLfloat”，可能丢失数据
-     1>RAMIActual.cpp(66): warning C4244: “=”: 从“double”转换到“GLfloat”，可能丢失数据
-     1>RAMIActual.cpp(985): warning C4244: “初始化”: 从“double”转换到“GLfloat”，可能丢失数据
-     1>RAMIActual.cpp(998): warning C4244: “=”: 从“double”转换到“GLfloat”，可能丢失数据
-     1>RAMIActual.cpp(999): warning C4244: “=”: 从“double”转换到“GLfloat”，可能丢失数据
-     1>RAMIActual.cpp(1000): warning C4244: “=”: 从“double”转换到“GLfloat”，可能丢失数据
-     1>RAMIActual.cpp(1007): warning C4244: “=”: 从“double”转换到“GLfloat”，可能丢失数据
-     1>RAMIActual.cpp(1008): warning C4244: “=”: 从“double”转换到“GLfloat”，可能丢失数据
-     1>RAMIActual.cpp(1674): warning C4244: “参数”: 从“double”转换到“GLfloat”，可能丢失数据
-     1>RAMIActual.cpp(1675): warning C4244: “参数”: 从“double”转换到“GLfloat”，可能丢失数据
-     1>RAMIActual.cpp(1676): warning C4244: “参数”: 从“double”转换到“GLfloat”，可能丢失数据
-     1>RAMIActual.cpp(1677): warning C4244: “参数”: 从“double”转换到“GLfloat”，可能丢失数据
-     1>RAMIActual.cpp(1695): warning C4244: “初始化”: 从“double”转换到“float”，可能丢失数据
-     1>d:\研究生\科研\g函数尺度效应\rami\rami-actual\ramiactual.cpp(1331): warning C4715: “drawLeaf”: 不是所有的控件路径都返回值
-     1>d:\研究生\科研\g函数尺度效应\rami\rami-actual\ramiactual.cpp(1353): warning C4715: “drawFoliage”: 不是所有的控件路径都返回值
-     1>d:\研究生\科研\g函数尺度效应\rami\rami-actual\ramiactual.cpp(1478): warning C4715: “drawTree”: 不是所有的控件路径都返回值
-     1>d:\研究生\科研\g函数尺度效应\rami\rami-actual\ramiactual.cpp(1527): warning C4715: “drawWood”: 不是所有的控件路径都返回值
-       Link:
-         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"D:\研究生\科研\G函数尺度效应\RAMI\RAMI-Actual\Debug\RAMIActual.exe" /INCREMENTAL /NOLOGO /LIBPATH:./Library kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:\研究生\科研\G函数尺度效应\RAMI\RAMI-Actual\Debug\RAMIActual.pdb" /SUBSYSTEM:WINDOWS /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\研究生\科研\G函数尺度效应\RAMI\RAMI-Actual\Debug\RAMIActual.lib" /MACHINE:X86 /SAFESEH Debug\RAMIActual.res
-         Debug\gl2ps.obj
-         Debug\RAMIActual.obj
-         Debug\SaveBMP.obj
-         RAMIActual.vcxproj -> D:\研究生\科研\G函数尺度效应\RAMI\RAMI-Actual\Debug\RAMIActual.exe
-     1>已完成生成项目“D:\研究生\科研\G函数尺度效应\RAMI\RAMI-Actual\RAMIActual.vcxproj”(Build 个目标)的操作。
+﻿生成启动时间为 2015/11/19 1:02:53。
+     1>项目“D:\GitHub\RAMI-Actual-version1\RAMIActual.vcxproj”在节点 2 上(Build 个目标)。
+     1>Link:
+         RAMIActual.vcxproj -> D:\GitHub\RAMI-Actual-version1\Debug\RAMIActual.exe
+     1>已完成生成项目“D:\GitHub\RAMI-Actual-version1\RAMIActual.vcxproj”(Build 个目标)的操作。
 
 生成成功。
 
-已用时间 00:00:01.63
+已用时间 00:00:00.03
